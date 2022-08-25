@@ -13,7 +13,7 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<Mutex<HashMap<Str
     if command_units.len() < 2 {
         tcp_helper::write_string(&mut stream, "0\n".to_owned());
         
-        let error_value = "Enter the command correctly".to_owned();
+        let error_value = "Server: Enter the command correctly".to_owned();
         tcp_helper::write_string(&mut stream, error_value);
         return; 
     }
@@ -32,7 +32,7 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<Mutex<HashMap<Str
 
         let value = match thread_table.get(&key) {
             Some(value) => value.to_string(),
-            None => "Not found".to_owned(),
+            None => "Server: Not found".to_owned(),
         };
         tcp_helper::write_string(&mut stream, value);
     }
@@ -41,13 +41,13 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<Mutex<HashMap<Str
         let value = command_units[2].to_owned();
         thread_table.insert(key, value);
         tcp_helper::write_string(&mut stream, "0\n".to_owned());
-        tcp_helper::write_string(&mut stream, "SUCCESS\n".to_owned());
+        tcp_helper::write_string(&mut stream, "Server: PUT Succeeded\n".to_owned());
     }
 
     else {
         tcp_helper::write_string(&mut stream, "1\n".to_owned());
         
-        let error_code = "FAILED - Wrong command\n".to_owned();
+        let error_code = "Server: FAILED - Wrong command\n".to_owned();
         tcp_helper::write_string(&mut stream, error_code);
         return; 
     }
