@@ -1,25 +1,28 @@
 mod server_thread_handler;
 mod tcp_helper;
-mod striped_hash_table;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::net::TcpListener;
 
 fn main() {
     // Create a hashtable
-    let locked_striped_hashtable = Arc::new(striped_hash_table::HashTable::new(10)); 
-
+    let capacity = 10;
+    let mut locked_striped_hashtable: Vec<Arc<Mutex<Vec<(i32, i32)>>>> = Vec::new();
+    for _ in 0..capacity {
+        locked_striped_hashtable.push(Arc::new(Mutex::new(Vec::new())));
+    }
     // Get the address and open the port
-    let address: String = std::env::args().nth(1).expect("No address given");
+    let address = "0.0.0.0:7878";
     let listener: TcpListener = TcpListener::bind(address).unwrap();
-    
     for stream in listener.incoming() {
-        let thread_locked_table = Arc::clone(&locked_striped_hashtable);
+        let mut arc_striped_hashtable: Vec<Arc<Mutex<Vec<(i32, i32)>>>> = Vec::new();
+        for i in 0..capacity {
+            arc_striped_hashtable.push(Arc::clone(&locked_striped_hashtable[i]));
+        }
         let stream = stream.unwrap();
         let t = thread::spawn(move|| {
-            server_thread_handler::process(stream, thread_locked_table);
+            server_thread_handler::process(stream, arc_striped_hashtable);
         });
-        t.join().expect("Thread failed to execute");
     }
 }
 
