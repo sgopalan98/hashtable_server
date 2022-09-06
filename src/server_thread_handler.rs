@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::net::TcpStream;
+use std::thread;
+use std::time::Duration;
 
 use crate::tcp_helper;
 
@@ -21,6 +23,7 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<Mutex<HashMap<Str
     let operation: &str = command_units[0];
 
     let mut thread_table = thread_locked_table.lock().unwrap();
+    thread::sleep(Duration::from_millis(400));
     let key: String = command_units[1].to_owned();
 
     if operation.eq("GET") {

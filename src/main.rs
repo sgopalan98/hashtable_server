@@ -12,7 +12,7 @@ fn main() {
     let locked_table = Arc::new(Mutex::new(HashMap::new()));
 
     // Get the address and open the port
-    let address: String = std::env::args().nth(1).expect("No address given");
+    let address = "0.0.0.0:7878";
     let listener: TcpListener = TcpListener::bind(address).unwrap();
     
     for stream in listener.incoming() {
