@@ -2,27 +2,32 @@ use std::{sync::Mutex};
 
 
 pub struct HashTable{
-    locks: Vec<Mutex<Vec<(i32, i32)>>>,
+    locks: Vec<Mutex<i32>>,
+    data: Vec<Mutex<Vec<(i32, i32)>>>,
     capacity: i32
 }
 
 impl HashTable{
     pub fn new(capacity: i32) -> HashTable {
-        let mut hash_list = Vec::new();
+        let mut locks = Vec::new();
+        let mut data = Vec::with_capacity(capacity as usize);
         for i in 0..capacity {
-            let new_list = Mutex::new(Vec::new());
-            hash_list.push(new_list);
+            let new_lock = Mutex::new(0);
+            locks.push(new_lock);
         }
         HashTable {
-            locks: hash_list,
+            locks,
+            data,
             capacity
         }
     }
 
     pub fn get(&self, key: i32) -> Result<i32, i32> {
+        let lock_index = (key as usize) % self.locks.len();
+        let lock = &self.locks[lock_index];
+        lock.lock().unwrap();
         let bucket_index = key % self.capacity;
-        let lock = &self.locks[bucket_index as usize];
-        let bucket = lock.lock().unwrap();
+        let bucket = &self.data[bucket_index as usize].lock().unwrap();
         let mut found = false;
         let mut value = -1;
         for i in 0..bucket.len() {
@@ -42,9 +47,11 @@ impl HashTable{
     }
 
     pub fn contains(self, key: i32) -> bool {
+        let lock_index = (key as usize) % self.locks.len();
+        let lock = &self.locks[lock_index];
+        lock.lock().unwrap();
         let bucket_index = key % self.capacity;
-        let lock = &self.locks[bucket_index as usize];
-        let bucket = lock.lock().unwrap();
+        let bucket = &self.data[bucket_index as usize].lock().unwrap();
         let mut found = false;
         for i in 0..bucket.len() {
             let a_key = bucket[i].0;
@@ -56,10 +63,15 @@ impl HashTable{
         return found;
     }
 
-    pub fn put(&self, key: i32, value: i32) -> Result<i32, i32> {
+    pub fn put(&mut self, key: i32, value: i32) -> Result<i32, i32> {
+        let lock_index = (key as usize) % self.locks.len();
+        let lock = &self.locks[lock_index];
+        lock.lock().unwrap();
         let bucket_index = key % self.capacity;
-        let lock = &self.locks[bucket_index as usize];
-        let mut bucket = lock.lock().unwrap();
+        let bucket = &self.data[bucket_index as usize].lock().unwrap();
+        if bucket.len() > (self.capacity as usize) * 4 {
+            self.capacity = self.capacity * 2;
+        }
         let mut found = false;
         for i in 0..bucket.len() {
             let a_key = bucket[i].0;
