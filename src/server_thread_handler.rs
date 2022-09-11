@@ -55,9 +55,9 @@ fn resize(thread_locked_table: &Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>) {
         *old_buckets = buckets;
     }
     else {
-        return;
+        
     }
-
+    return;
 }
 
 fn put(thread_locked_table: &Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, key: i32, value: i32) -> Result<i32, i32> {
