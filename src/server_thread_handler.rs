@@ -1,7 +1,5 @@
 use std::sync::{Arc, Mutex, RwLock};
 use std::net::TcpStream;
-use std::thread;
-use std::time::Duration;
 use crate::tcp_helper;
 
 fn convert_string_to_int(string: String) -> i32{
@@ -12,7 +10,6 @@ fn get(thread_locked_table: &Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, key: i32)
     let buckets = thread_locked_table.read().unwrap();
     let index = key as usize % buckets.len();
     let bucket = buckets[index].lock().unwrap();
-    thread::sleep(Duration::from_millis(400));
     let mut found = false;
     let mut value = -1;
     for i in 0..bucket.len() {
@@ -36,7 +33,6 @@ fn resize(thread_locked_table: &Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>) {
     let a_bucket = old_buckets[0].lock().unwrap();
     
     if a_bucket.len() >= old_buckets.len(){
-        println!("RESIZING");
         drop(a_bucket);
         let mut buckets:Vec<Mutex<Vec<(i32, i32)>>> = Vec::new();
         let old_capacity = old_buckets.len();
@@ -70,7 +66,6 @@ fn put(thread_locked_table: &Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, key: i32,
         resize(&thread_locked_table);
         return put(thread_locked_table, key, value);
     }
-    thread::sleep(Duration::from_millis(400));
     let mut found = false;
     for i in 0..bucket.len() {
         let a_key = bucket[i].0;
@@ -127,6 +122,6 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<RwLock<Vec<Mutex<
         let error_code = "Server: FAILED - Wrong command\n".to_owned();
         tcp_helper::write_string(&mut stream, error_code); 
     }
-    // println!("FINISHED {}\n", command_str);
+    println!("{}\n", command_str);
     return;
 }
