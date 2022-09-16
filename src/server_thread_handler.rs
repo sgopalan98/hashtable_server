@@ -9,7 +9,7 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<Mutex<HashMap<Str
     
     let command_str = tcp_helper::read_command(&mut stream);
     let command_units = command_str.split_whitespace().collect::<Vec<_>>();
-    
+
     if command_units.len() < 2 {
         tcp_helper::write_string(&mut stream, "0\n".to_owned());
         
@@ -22,7 +22,6 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<Mutex<HashMap<Str
 
     let mut thread_table = thread_locked_table.lock().unwrap();
     let key: String = command_units[1].to_owned();
-
     if operation.eq("GET") {
         let error_code = match thread_table.get(&key) {
             Some(_) => "0\n".to_owned(),
@@ -49,7 +48,8 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<Mutex<HashMap<Str
         
         let error_code = "Server: FAILED - Wrong command\n".to_owned();
         tcp_helper::write_string(&mut stream, error_code);
-        return; 
     }
+    println!("{} processed\n", command_str);
+    return; 
 
 }

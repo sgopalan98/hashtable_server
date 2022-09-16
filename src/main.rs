@@ -9,10 +9,11 @@ use std::net::TcpListener;
 
 fn main() {
     // Create a hashtable
-    let locked_table = Arc::new(Mutex::new(HashMap::new()));
+    let capacity = 1000;
+    let locked_table = Arc::new(Mutex::new(HashMap::with_capacity(capacity)));
 
     // Get the address and open the port
-    let address: String = std::env::args().nth(1).expect("No address given");
+    let address = "0.0.0.0:7878";
     let listener: TcpListener = TcpListener::bind(address).unwrap();
     
     for stream in listener.incoming() {
