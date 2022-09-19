@@ -6,7 +6,7 @@ use std::net::TcpListener;
 
 fn main() {
     // Create a hashtable
-    let capacity = 1;
+    let capacity = 1000;
     let locked_striped_hashtable: Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>> = Arc::new(RwLock::new(Vec::new()));
     {
         let mut buckets = locked_striped_hashtable.write().unwrap();

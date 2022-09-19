@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex, RwLock};
 use std::net::TcpStream;
+use std::time::Instant;
 use crate::tcp_helper;
 
 fn convert_string_to_int(string: String) -> i32{
@@ -72,6 +73,7 @@ fn put(thread_locked_table: &Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, key: i32,
         if key == a_key {
             found = true;
             bucket[i].1 = value;
+            break;
         }
     }
     if !found {
@@ -82,46 +84,57 @@ fn put(thread_locked_table: &Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, key: i32,
 
 pub fn process(mut stream: TcpStream, thread_locked_table: Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>){
     
-    let command_str = tcp_helper::read_command(&mut stream);
-    let command_units = command_str.split_whitespace().collect::<Vec<_>>();
-    if command_units.len() < 2 {
-        tcp_helper::write_string(&mut stream, "0\n".to_owned());
-        let error_value = "Server: Enter the command correctly".to_owned();
-        tcp_helper::write_string(&mut stream, error_value);
-        return; 
-    }
+    let mut command_str = tcp_helper::read_command(&mut stream);
+    while !command_str.eq("CLOSE") {
+        let command_units = command_str.split_whitespace().collect::<Vec<_>>();
+        if command_units.len() < 2 {
+            tcp_helper::write_string(&mut stream, "0\n".to_owned());
+            let error_value = "Server: Enter the command correctly".to_owned();
+            tcp_helper::write_string(&mut stream, error_value);
+            return; 
+        }
 
-    let operation: &str = command_units[0];
-    let key: i32 = convert_string_to_int(command_units[1].to_owned());
-    if operation.eq("GET") {
-        let error_code = match get(&thread_locked_table, key) {
-            Ok(_) => "0\n".to_owned(),
-            Err(_) => "1\n".to_owned(),
-        };
-        tcp_helper::write_string(&mut stream, error_code);
+        let operation: &str = command_units[0];
+        let key: i32 = convert_string_to_int(command_units[1].to_owned());
 
-        let value = match get(&thread_locked_table, key) {
-            Ok(value) => value.to_string(),
-            Err(_) => "Server: Not found".to_owned(),
-        };
-        tcp_helper::write_string(&mut stream, value);
-    }
+        // GET
+        if operation.eq("GET") {
+            let now = Instant::now();
+            let error_code = match get(&thread_locked_table, key) {
+                Ok(_) => "0\n".to_owned(),
+                Err(_) => "1\n".to_owned(),
+            };
+            println!("{:?}\n", now.elapsed().as_micros());
+            tcp_helper::write_string(&mut stream, error_code);
 
-    else if operation.eq("PUT"){
-        let value = convert_string_to_int(command_units[2].to_owned());
-        let error_code = match put(&thread_locked_table, key, value){
-            Ok(_) => "0\n".to_owned(),
-            Err(_) => "1\n".to_owned(),
-        };
-        tcp_helper::write_string(&mut stream, error_code);
-        tcp_helper::write_string(&mut stream, "Server: PUT Succeeded\n".to_owned());
-    }
+            let now = Instant::now();
+            let value = match get(&thread_locked_table, key) {
+                Ok(value) => value.to_string() + "\n",
+                Err(_) => "Server: Not found\n".to_owned(),
+            };
+            println!("{:?}\n", now.elapsed().as_micros());
+            tcp_helper::write_string(&mut stream, value);
+        }
 
-    else {
-        tcp_helper::write_string(&mut stream, "1\n".to_owned());
-        let error_code = "Server: FAILED - Wrong command\n".to_owned();
-        tcp_helper::write_string(&mut stream, error_code); 
+        // PUT
+        else if operation.eq("PUT"){
+            let value = convert_string_to_int(command_units[2].to_owned());
+            let now = Instant::now();
+            let error_code = match put(&thread_locked_table, key, value){
+                Ok(_) => "0\n".to_owned(),
+                Err(_) => "1\n".to_owned(),
+            };
+            println!("{:?}\n", now.elapsed().as_micros());
+            tcp_helper::write_string(&mut stream, error_code);
+            tcp_helper::write_string(&mut stream, "Server: PUT Succeeded\n".to_owned());
+        }
+
+        else {
+            tcp_helper::write_string(&mut stream, "1\n".to_owned());
+            let error_code = "Server: FAILED - Wrong command\n".to_owned();
+            tcp_helper::write_string(&mut stream, error_code); 
+        }
+        command_str = tcp_helper::read_command(&mut stream);
     }
-    println!("{}\n", command_str);
     return;
 }
