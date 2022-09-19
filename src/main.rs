@@ -19,10 +19,9 @@ fn main() {
     for stream in listener.incoming() {
         let thread_locked_table = Arc::clone(&locked_table);
         let stream = stream.unwrap();
-        let t = thread::spawn(move|| {
+        let _t = thread::spawn(move|| {
             server_thread_handler::process(stream, thread_locked_table);
         });
-        t.join().expect("Thread failed to execute");
     }
 }
 

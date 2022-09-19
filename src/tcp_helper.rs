@@ -10,5 +10,6 @@ pub(crate) fn read_command(stream: &mut TcpStream) -> String{
 }
 
 pub(crate) fn write_string(stream: &mut TcpStream, output: String) {
+    
     stream.write(output.as_bytes()).unwrap();
 }
