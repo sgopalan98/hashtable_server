@@ -25,28 +25,23 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<Mutex<HashMap<Str
             let key: String = command_units[1].to_owned();
             let mut thread_table = thread_locked_table.lock().unwrap();
             if operation.eq("GET") {
-                let now = Instant::now();
-                let error_code = match thread_table.get(&key) {
+                let result = thread_table.get(&key);
+                let error_code = match result {
                     Some(_) => "0\n".to_owned(),
                     None => "1\n".to_owned(),
                 };
-                println!("{}\n", now.elapsed().as_micros());
                 tcp_helper::write_string(&mut stream, error_code);
 
-                let now = Instant::now();
-                let value = match thread_table.get(&key) {
+                let value = match result {
                     Some(value) => value.to_string() + "\n",
                     None => "Server: Not found\n".to_owned(),
                 };
-                println!("{}\n", now.elapsed().as_micros());
                 tcp_helper::write_string(&mut stream, value);
             }
 
             else if operation.eq("PUT"){
                 let value = command_units[2].to_owned();
-                let now = Instant::now();
                 thread_table.insert(key, value);
-                println!("{}\n", now.elapsed().as_micros());
                 tcp_helper::write_string(&mut stream, "0\n".to_owned());
                 tcp_helper::write_string(&mut stream, "Server: PUT Succeeded\n".to_owned());
             }
