@@ -99,32 +99,26 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<RwLock<Vec<Mutex<
 
         // GET
         if operation.eq("GET") {
-            let now = Instant::now();
-            let error_code = match get(&thread_locked_table, key) {
+            let result = get(&thread_locked_table, key);
+            let error_code = match result {
                 Ok(_) => "0\n".to_owned(),
                 Err(_) => "1\n".to_owned(),
             };
-            println!("{:?}\n", now.elapsed().as_micros());
             tcp_helper::write_string(&mut stream, error_code);
-
-            let now = Instant::now();
-            let value = match get(&thread_locked_table, key) {
+            let value = match result {
                 Ok(value) => value.to_string() + "\n",
                 Err(_) => "Server: Not found\n".to_owned(),
             };
-            println!("{:?}\n", now.elapsed().as_micros());
             tcp_helper::write_string(&mut stream, value);
         }
 
         // PUT
         else if operation.eq("PUT"){
             let value = convert_string_to_int(command_units[2].to_owned());
-            let now = Instant::now();
             let error_code = match put(&thread_locked_table, key, value){
                 Ok(_) => "0\n".to_owned(),
                 Err(_) => "1\n".to_owned(),
             };
-            println!("{:?}\n", now.elapsed().as_micros());
             tcp_helper::write_string(&mut stream, error_code);
             tcp_helper::write_string(&mut stream, "Server: PUT Succeeded\n".to_owned());
         }

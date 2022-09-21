@@ -15,7 +15,7 @@ fn main() {
         }
     }
     // Get the address and open the port
-    let address = "0.0.0.0:7878";
+    let address = "0.0.0.0:7879";
     let listener: TcpListener = TcpListener::bind(address).unwrap();
     for stream in listener.incoming() {
         let thread_specific_hashtable = Arc::clone(&locked_striped_hashtable);
