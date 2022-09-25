@@ -7,7 +7,7 @@ fn convert_string_to_int(string: String) -> i32{
     return string.parse::<i32>().unwrap();
 }
 
-fn get(thread_locked_table: &Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, key: i32) -> Result<i32, i32> {
+pub fn get(thread_locked_table: &Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, key: i32) -> Result<i32, i32> {
     let buckets = thread_locked_table.read().unwrap();
     let index = key as usize % buckets.len();
     let bucket = buckets[index].lock().unwrap();
@@ -57,7 +57,7 @@ fn resize(thread_locked_table: &Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>) {
     return;
 }
 
-fn put(thread_locked_table: &Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, key: i32, value: i32) -> Result<i32, i32> {
+pub fn put(thread_locked_table: &Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, key: i32, value: i32) -> Result<i32, i32> {
     let buckets = thread_locked_table.read().unwrap();
     let index = key as usize % buckets.len();
     let mut bucket = buckets[index].lock().unwrap();
