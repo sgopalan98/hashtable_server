@@ -21,6 +21,12 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<Mutex<HashMap<Str
         }
 
         let operation: &str = command_units[0];
+        if operation.eq("RESET") {
+            let mut thread_table = thread_locked_table.lock().unwrap();
+            thread_table.clear();
+            return;
+        }
+
         {
             let key: String = command_units[1].to_owned();
             let mut thread_table = thread_locked_table.lock().unwrap();
