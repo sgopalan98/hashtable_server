@@ -44,7 +44,6 @@ fn evaluate_hashtable(hashtable: Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, no_of
                         };
                     }
                 }
-                // println!("For thread {} iteration {} completed\n", thread_no, iteration);
             }
         }));
     }
@@ -69,16 +68,6 @@ fn main() {
             buckets.push(Mutex::new(Vec::new()));
         }
     }
-    // // Get the address and open the port
-    // let address = "0.0.0.0:7879";
-    // let listener: TcpListener = TcpListener::bind(address).unwrap();
-    // for stream in listener.incoming() {
-    //     let thread_specific_hashtable = Arc::clone(&locked_striped_hashtable);
-    //     let stream = stream.unwrap();
-    //     thread::spawn(move|| {
-    //         server_thread_handler::process(stream, thread_specific_hashtable);
-    //     });
-    // }
 
     let no_of_threads = 4; // No of hyperthreads
     let no_of_items: usize = 100000;
@@ -100,12 +89,13 @@ fn main() {
     let mut throughput_values = vec![];
     for (index, duration) in elapsed_duration.iter().enumerate() {
         let no_of_operations = no_of_items + no_of_items * (index + 1);
-        // println!("TIME TAKEN {:?}", duration.as_micros());
-        let throughput = no_of_operations * i32::pow(10, 3) as usize / duration.as_millis() as usize;
+        println!("TIME TAKEN {:?}", duration.as_micros());
+        let throughput = no_of_operations as f64 / duration.as_micros() as f64;
         println!("THROUGHPUT {}", throughput);
         // Append through put values
         throughput_values.push((100.0 / get_per_puts.clone()[index] as f64, throughput));
-        // println!("THE % put is {}", 100.0 / get_per_puts.clone()[index] as f64);
+        println!("THE % put is {}", 100.0 / get_per_puts.clone()[index] as f64);
+	    println!();
     }
 }
 
