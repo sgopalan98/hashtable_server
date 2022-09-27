@@ -7,6 +7,16 @@ fn convert_string_to_int(string: String) -> i32{
     return string.parse::<i32>().unwrap();
 }
 
+fn reset(thread_locked_table: &Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, capacity: i32) {
+    let mut old_buckets = thread_locked_table.write().unwrap();
+    let mut buckets = vec![];
+    for _ in 0..capacity {
+        buckets.push(Mutex::new(Vec::new()));
+    }
+
+    *old_buckets = buckets;
+}
+
 fn get(thread_locked_table: &Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, key: i32) -> Result<i32, i32> {
     let buckets = thread_locked_table.read().unwrap();
     let index = key as usize % buckets.len();
@@ -82,7 +92,7 @@ fn put(thread_locked_table: &Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, key: i32,
     return Ok(0);
 }
 
-pub fn process(mut stream: TcpStream, thread_locked_table: Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>){
+pub fn process(mut stream: TcpStream, thread_locked_table: Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, capacity: i32){
     
     let mut command_str = tcp_helper::read_command(&mut stream);
     while !command_str.eq("CLOSE") {
@@ -96,6 +106,11 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<RwLock<Vec<Mutex<
 
         let operation: &str = command_units[0];
         let key: i32 = convert_string_to_int(command_units[1].to_owned());
+
+        if operation.eq("RESET") {
+            reset(&thread_locked_table, capacity);
+            return;
+        }
 
         // GET
         if operation.eq("GET") {

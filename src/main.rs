@@ -21,7 +21,7 @@ fn main() {
         let thread_specific_hashtable = Arc::clone(&locked_striped_hashtable);
         let stream = stream.unwrap();
         thread::spawn(move|| {
-            server_thread_handler::process(stream, thread_specific_hashtable);
+            server_thread_handler::process(stream, thread_specific_hashtable, capacity);
         });
     }
 }
