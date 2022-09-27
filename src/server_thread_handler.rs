@@ -1,9 +1,8 @@
-use std::io::Read;
+use std::io::{Read, Error, BufReader, BufRead};
 use std::sync::{Arc, Mutex, RwLock};
 use std::net::TcpStream;
 use std::thread;
 use std::io::Write;
-use crate::tcp_helper;
 
 fn convert_string_to_int(string: String) -> i32{
     return string.parse::<i32>().unwrap();
@@ -95,46 +94,49 @@ fn reset(thread_locked_table: &Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, capacit
     *old_buckets = buckets;
 }
 
-
-fn write_string(stream: &mut TcpStream, output: String) {
+fn write_string(locked_stream: &Arc<Mutex<TcpStream>>, output: String) {
+    let mut stream = locked_stream.lock().unwrap();
     stream.write(output.as_bytes()).unwrap();
 }
 
-
-
-pub fn handle(mut stream: TcpStream, thread_locked_table: Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, capacity: i32) {
+pub fn handle(stream: TcpStream, thread_locked_table: Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, capacity: i32) {
     read_command(stream, thread_locked_table, capacity)
 }
 
-
 fn read_command(stream: TcpStream, thread_locked_table: Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, capacity: i32){
-    // Setting as non blocking
-    stream.set_nonblocking(true).expect("Setting non blocking failed ");
-    
-    let mut stream_cloned = stream.try_clone().expect("STREAM CLONE FAILED");
+    let stream_clone = stream.try_clone().unwrap();
+    let mut reader = BufReader::new(stream_clone);
+    let arc_stream = Arc::new(Mutex::new(stream));
     loop {
         let mut input = String::new();
-        let result = stream_cloned.read_to_string(&mut input);
+        let arc_cloned_stream = Arc::clone(&arc_stream);
+        let result: Result<usize, Error>;
+        {            
+            result = reader.read_line(&mut input);
+        }
         match result {
             Ok(_) => {
                 if input.trim().eq("CLOSE") {
+                    println!("CLOSING");
+                    write_string(&arc_cloned_stream, input);
                     return;
                 }
+                if input.len() == 0 {
+                    continue;
+                }
                 let table = Arc::clone(&thread_locked_table);
-                thread::spawn(move || process(&mut stream_cloned, table, capacity, input));
+                thread::spawn(move || process(arc_cloned_stream, table, capacity, input));
             },
             Err(_) => continue,
         };
     }
 }
 
-pub fn process(stream: &mut TcpStream, thread_locked_table: Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, capacity: i32, command_str: String) -> i32{
-
+pub fn process(stream: Arc<Mutex<TcpStream>>, thread_locked_table: Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, capacity: i32, command_str: String) -> i32{
     let command_units = command_str.split_whitespace().collect::<Vec<_>>();
     if command_units.len() < 2 {
-        tcp_helper::write_string(stream, "0\n".to_owned());
         let error_value = "Server: Enter the command correctly".to_owned();
-        tcp_helper::write_string(stream, error_value);
+        write_string(&stream, error_value);
         return 1; 
     }
 
@@ -149,33 +151,28 @@ pub fn process(stream: &mut TcpStream, thread_locked_table: Arc<RwLock<Vec<Mutex
     // GET
     if operation.eq("GET") {
         let result = get(&thread_locked_table, key);
-        let error_code = match result {
-            Ok(_) => "0\n".to_owned(),
-            Err(_) => "1\n".to_owned(),
-        };
-        tcp_helper::write_string(stream, error_code);
         let value = match result {
-            Ok(value) => value.to_string() + "\n",
-            Err(_) => "Server: Not found\n".to_owned(),
+            Ok(value) => value.to_string(),
+            Err(_) => "Server: Not found".to_owned(),
         };
-        tcp_helper::write_string(stream, value);
+        let return_value = format!("{};{}\n", command_str.trim(), value);
+        write_string(&stream, return_value);
     }
 
     // PUT
     else if operation.eq("PUT"){
         let value = convert_string_to_int(command_units[2].to_owned());
         let error_code = match put(&thread_locked_table, key, value){
-            Ok(_) => "0\n".to_owned(),
-            Err(_) => "1\n".to_owned(),
+            Ok(_) => "0".to_owned(),
+            Err(_) => "1".to_owned(),
         };
-        tcp_helper::write_string(stream, error_code);
-        tcp_helper::write_string(stream, "Server: PUT Succeeded\n".to_owned());
+        let return_value = format!("{};{}\n", command_str.trim(), error_code);
+        write_string(&stream, return_value);
     }
 
     else {
-        tcp_helper::write_string(stream, "1\n".to_owned());
         let error_code = "Server: FAILED - Wrong command\n".to_owned();
-        tcp_helper::write_string(stream, error_code); 
+        write_string(&stream, error_code); 
     }
     return 1;
 }
