@@ -63,18 +63,6 @@ fn main() {
     let capacity = 1000;
     let locked_table = Arc::new(Mutex::new(HashMap::with_capacity(capacity)));
 
-    // Get the address and open the port
-    // let address = "0.0.0.0:7878";
-    // let listener: TcpListener = TcpListener::bind(address).unwrap();
-    
-    // for stream in listener.incoming() {
-    //     let thread_locked_table = Arc::clone(&locked_table);
-    //     let stream = stream.unwrap();
-    //     let _t = thread::spawn(move|| {
-    //         server_thread_handler::process(stream, thread_locked_table);
-    //     });
-    // }
-
 
     let no_of_threads = 4; // No of hyperthreads
     let no_of_items: usize = 100000;
@@ -97,11 +85,12 @@ fn main() {
     for (index, duration) in elapsed_duration.iter().enumerate() {
         let no_of_operations = no_of_items + no_of_items * (index + 1);
         println!("TIME TAKEN {:?}", duration.as_micros());
-        let throughput = no_of_operations * i32::pow(10, 6) as usize / duration.as_micros() as usize;
-        // println!("THROUGHPUT {}", throughput);
+        let throughput = no_of_operations as f64 / duration.as_micros() as f64;
+        println!("THROUGHPUT {}", throughput);
         // Append through put values
         throughput_values.push((100.0 / get_per_puts.clone()[index] as f64, throughput));
-        // println!("THE % put is {}", 100.0 / get_per_puts.clone()[index] as f64);
+        println!("THE % put is {}", 100.0 / get_per_puts.clone()[index] as f64);
+    	println!();
     }
 }
 
