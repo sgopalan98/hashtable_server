@@ -20,7 +20,7 @@ fn main() {
         let thread_locked_table = Arc::clone(&locked_table);
         let stream = stream.unwrap();
         let _t = thread::spawn(move|| {
-            server_thread_handler::process(stream, thread_locked_table);
+            server_thread_handler::handle(stream, thread_locked_table, capacity);
         });
     }
 }
