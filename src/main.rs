@@ -4,7 +4,7 @@ mod tcp_helper;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::thread;
+use std::{thread, env};
 use std::net::TcpListener;
 use std::time::{Instant, Duration};
 use rand::seq::SliceRandom;
@@ -58,13 +58,19 @@ fn evaluate_hashtable(hashtable: Arc<Mutex<HashMap<usize, usize>>>, no_of_thread
     return elapsed;
 }
 
+
+
+
 fn main() {
+    //Command line arguments
+    let args: Vec<String> = env::args().collect();
+    let no_of_threads_string = &args[0];
+    let no_of_threads = no_of_threads_string.parse().unwrap(); // No of hyperthreads
     // Create a hashtable
     let capacity = 1000;
     let locked_table = Arc::new(Mutex::new(HashMap::with_capacity(capacity)));
 
 
-    let no_of_threads = 4; // No of hyperthreads
     let no_of_items: usize = 100000;
     
     // Input
@@ -88,8 +94,8 @@ fn main() {
         let throughput = no_of_operations as f64 / duration.as_micros() as f64;
         println!("THROUGHPUT {}", throughput);
         // Append through put values
-        throughput_values.push((100.0 / get_per_puts.clone()[index] as f64, throughput));
-        println!("THE % put is {}", 100.0 / get_per_puts.clone()[index] as f64);
+        throughput_values.push((100.0 / (get_per_puts.clone()[index] + 1) as f64, throughput));
+        println!("THE % put is {}", 100.0 / (get_per_puts.clone()[index] + 1) as f64);
     	println!();
     }
 }
