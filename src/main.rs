@@ -5,9 +5,10 @@ mod tcp_helper;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::{thread, env};
-use std::net::TcpListener;
 use std::time::{Instant, Duration};
 use rand::seq::SliceRandom;
+use rand_chacha::ChaChaRng;
+use rand_chacha::rand_core::SeedableRng;
 
 
 fn evaluate_hashtable(hashtable: Arc<Mutex<HashMap<usize, usize>>>, no_of_threads: usize, input_vector: Vec<usize>, get_per_put: i32) -> Duration {
@@ -78,8 +79,12 @@ fn main() {
     let base = 0;
     let end = no_of_items - 1;
     let mut input: Vec<_> = (base..=end).collect();
-    let mut rng = rand::thread_rng();
+    // let mut rng = rand::thread_rng();
+    let seed = [0; 32];
+    let mut rng = ChaChaRng::from_seed(seed);
+
     input.shuffle(&mut rng);
+    println!("The first few elements are {:?}", &input[0..5]);
 
     let mut elapsed_duration = vec![];
 
