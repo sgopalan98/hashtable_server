@@ -61,7 +61,7 @@ fn evaluate_hashtable(hashtable: Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, no_of
 fn main() {
     // Command line arguments
     let args: Vec<String> = env::args().collect();
-    let no_of_threads_string = &args[0];
+    let no_of_threads_string = &args[1];
     let no_of_threads = no_of_threads_string.parse().unwrap(); // No of hyperthreads
     // Create a hashtable
     let capacity = 1000;
