@@ -3,8 +3,9 @@ mod tcp_helper;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Instant, Duration};
 use std::{thread, clone, env};
-use std::net::TcpListener;
 use rand::seq::SliceRandom;
+use rand_chacha::ChaChaRng;
+use rand_chacha::rand_core::SeedableRng;
 
 use crate::server_thread_handler::{put, get};
 
@@ -78,8 +79,12 @@ fn main() {
     let base = 0;
     let end = no_of_items - 1;
     let mut input: Vec<_> = (base..=end).collect();
-    let mut rng = rand::thread_rng();
+    // let mut rng = rand::thread_rng();
+    let seed = [0; 32];
+    let mut rng = ChaChaRng::from_seed(seed);
+
     input.shuffle(&mut rng);
+    println!("The first few elements are {:?}", &input[0..5]);
 
     let mut elapsed_duration = vec![];
 
