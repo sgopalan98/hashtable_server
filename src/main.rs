@@ -1,8 +1,9 @@
 mod server_thread_handler;
 mod tcp_helper;
+mod bench;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Instant, Duration};
-use std::{thread, clone, env};
+use std::{thread, clone, env, fs};
 use rand::seq::SliceRandom;
 use rand_chacha::ChaChaRng;
 use rand_chacha::rand_core::SeedableRng;
@@ -60,10 +61,6 @@ fn evaluate_hashtable(hashtable: Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>>, no_of
 
 
 fn main() {
-    // Command line arguments
-    let args: Vec<String> = env::args().collect();
-    let no_of_threads_string = &args[1];
-    let no_of_threads = no_of_threads_string.parse().unwrap(); // No of hyperthreads
     // Create a hashtable
     let capacity = 1000;
     let locked_striped_hashtable: Arc<RwLock<Vec<Mutex<Vec<(i32, i32)>>>>> = Arc::new(RwLock::new(Vec::new()));
@@ -86,24 +83,39 @@ fn main() {
     input.shuffle(&mut rng);
     println!("The first few elements are {:?}", &input[0..5]);
 
-    let mut elapsed_duration = vec![];
 
-    let get_per_puts: Vec<i32> = (1..=5).collect();
-    for get_per_put in get_per_puts.clone() {
-        elapsed_duration.push(evaluate_hashtable(locked_striped_hashtable.clone(), no_of_threads, input.clone(), get_per_put));
+    let mut file_string = String::new();
+    for no_of_threads in 1..=32 {
+        let thread_string = format!("NO OF THREADS: {}\n", no_of_threads);
+        file_string.push_str(&thread_string);
+
+        let mut elapsed_duration = vec![];
+
+        let get_per_puts: Vec<i32> = (1..=5).collect();
+        for get_per_put in get_per_puts.clone() {
+            elapsed_duration.push(evaluate_hashtable(locked_striped_hashtable.clone(), no_of_threads, input.clone(), get_per_put));
+        }
+        
+        let mut throughput_values = vec![];
+        for (index, duration) in elapsed_duration.iter().enumerate() {
+            let no_of_operations = no_of_items + no_of_items * (index + 1);
+            let time_taken  = format!("TIME TAKEN {:?}\n", duration.as_micros());
+            file_string.push_str(&time_taken);
+
+
+            let throughput = no_of_operations as f64 / duration.as_micros() as f64;
+            let throughput_string = format!("THROUGHPUT {}\n", throughput);
+            file_string.push_str(&throughput_string);
+
+            // Append through put values
+            throughput_values.push((100.0 / (get_per_puts.clone()[index] + 1) as f64, throughput));
+            let put_str = format!("THE % put is {}\n", 100.0 / (get_per_puts.clone()[index] + 1) as f64);
+            file_string.push_str(&put_str);
+        }
+        file_string.push_str("\n\n");
     }
-    
-    let mut throughput_values = vec![];
-    for (index, duration) in elapsed_duration.iter().enumerate() {
-        let no_of_operations = no_of_items + no_of_items * (index + 1);
-        println!("TIME TAKEN {:?}", duration.as_micros());
-        let throughput = no_of_operations as f64 / duration.as_micros() as f64;
-        println!("THROUGHPUT {}", throughput);
-        // Append through put values
-        throughput_values.push((100.0 / (get_per_puts.clone()[index] + 1) as f64, throughput));
-        println!("THE % put is {}", 100.0 / (get_per_puts.clone()[index] + 1) as f64);
-	    println!();
-    }
+
+    fs::write("results.txt", file_string).unwrap();
 }
 
 
