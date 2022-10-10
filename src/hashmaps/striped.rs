@@ -49,7 +49,7 @@ impl StripedHashTable {
         }
         let mut found = false;
         for i in 0..bucket.len() {
-            if(bucket[i].2 == 1){
+            if bucket[i].2 == 1 {
                 let a_key = bucket[i].0;
                 if key == a_key {
                     found = true;
@@ -100,7 +100,7 @@ impl StripedHashTable {
         let mut bucket = buckets[index].lock().unwrap();
         let mut found = false;
         for i in 0..bucket.len() {
-            if(bucket[i].2 == 1){
+            if bucket[i].2 == 1 {
                 let a_key = bucket[i].0;
                 if key == a_key {
                     found = true;

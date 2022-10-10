@@ -42,7 +42,7 @@ impl CollectionHandle for StripedHashMapTable {
             Ok(value) => {
                 return self.0.insert_or_update(*key as usize, value + 1).is_ok();
             }
-            Err(value) => {
+            Err(_value) => {
                 return false;
             }
         }
