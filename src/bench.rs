@@ -36,7 +36,6 @@ mod timestamp {
     }
 }
 
-
 pub fn create_workloads(no_of_threads: u32) -> Vec<(String, Workload)> {
     let read_heavy_mix = Mix {
         read: 98,
@@ -91,13 +90,12 @@ C: Collection,
     for (name, workload) in workloads.into_iter() {
         // Run the workload and get measurement.
         let measurement = workload.run_silently::<C>();
-        // println!("{:?}", measurement);
-        // Write to STDERR
+        // Write to PATH
+        let path = "Results/".to_owned() + collection_name.as_str() + name.as_str();
         let mut wr = csv::WriterBuilder::new()
-            .from_writer(io::stderr());
-        let record_name = collection_name.clone() + name.as_str();
+            .from_path(path).unwrap();
         wr.serialize(Record{
-            name: record_name,
+            name: name,
             total_ops: measurement.total_ops,
             threads: no_of_threads,
             spent: measurement.spent,
