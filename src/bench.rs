@@ -1,4 +1,5 @@
 use bustle::*;
+use std::fs::OpenOptions;
 use std::{fmt::Debug, io};
 use std::time::Duration;
 
@@ -74,35 +75,46 @@ pub fn create_workloads(no_of_threads: u32) -> Vec<(String, Workload)> {
     
 
     let mut workloads = vec![];
-    workloads.push(("ReadHeavy.csv".to_owned(), read_heavy_workload));
-    workloads.push(("RapidGrow.csv".to_owned(), rapid_grow_workload));
-    workloads.push(("Exchange.csv".to_owned(), exchange_workload));
+    workloads.push(("ReadHeavy".to_owned(), read_heavy_workload));
+    workloads.push(("RapidGrow".to_owned(), rapid_grow_workload));
+    workloads.push(("Exchange".to_owned(), exchange_workload));
     return workloads;
 }
 
-
-pub fn generate_metrics<C>(collection_name: String, workloads:Vec<(String, Workload)>, no_of_threads: u32)
+pub fn generate_metrics<C>(collection_name: String, no_of_threads: u32)
 where 
 C: Collection,
 <C::Handle as CollectionHandle>:: Key: Send + Debug,
 {
-    // For every workload,
-    for (name, workload) in workloads.into_iter() {
-        // Run the workload and get measurement.
-        let measurement = workload.run_silently::<C>();
-        // Write to PATH
-        let path = "Results/".to_owned() + collection_name.as_str() + name.as_str();
-        let mut wr = csv::WriterBuilder::new()
-            .from_path(path).unwrap();
-        wr.serialize(Record{
-            name: name,
-            total_ops: measurement.total_ops,
-            threads: no_of_threads,
-            spent: measurement.spent,
-            throughput: measurement.throughput,
-            latency: measurement.latency,
-            })
-            .expect("cannot serialize");
-        wr.flush().expect("cannot flush");
+    for thread_count in 1..=no_of_threads {
+        let workloads = create_workloads(thread_count);
+        // For every workload,
+        for (name, workload) in workloads.into_iter() {
+            // Run the workload and get measurement.
+            let measurement = workload.run_silently::<C>();
+            // Write to PATH
+            let path = "Results/".to_owned() + collection_name.as_str() + "-" + name.as_str() + ".csv";
+
+            let file = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .append(true)
+                .open(path)
+                .unwrap();
+            let mut wr = csv::WriterBuilder::new()
+                .has_headers(false)
+                .from_writer(file);
+            wr.serialize(Record{
+                name: name,
+                total_ops: measurement.total_ops,
+                threads: thread_count,
+                spent: measurement.spent,
+                throughput: measurement.throughput / 10.0_f64.powi(6),
+                latency: measurement.latency,
+                })
+                .expect("cannot serialize");
+            wr.flush().expect("cannot flush");
+        }
     }
+    
 }
