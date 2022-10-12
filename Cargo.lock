@@ -73,18 +73,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "concurrent_hash_table"
-version = "0.1.0"
-dependencies = [
- "bustle",
- "csv",
- "rand 0.8.5",
- "rand_chacha 0.3.1",
- "serde",
- "structopt",
-]
-
-[[package]]
 name = "csv"
 version = "1.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -347,6 +335,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "striped_hashtable"
+version = "0.1.0"
+dependencies = [
+ "bustle",
+ "csv",
+ "rand 0.8.5",
+ "rand_chacha 0.3.1",
+ "serde",
+ "structopt",
 ]
 
 [[package]]
