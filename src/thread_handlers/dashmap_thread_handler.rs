@@ -25,6 +25,7 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<DashMap<u128, u12
         if operation.eq("RESET") {
             println!("{}\n", command_str);
             thread_locked_table.clear();
+            tcp_helper::write_string(&mut stream, "0\n".to_owned());
             return;
         }
 
