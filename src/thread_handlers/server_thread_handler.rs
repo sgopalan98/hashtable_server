@@ -4,7 +4,7 @@ use std::net::TcpStream;
 use std::thread;
 use std::io::Write;
 
-use crate::hashmap::StripedHashTable;
+use striped_hashmap::StripedHashMap;
 use crate::tcp_helper;
 
 fn convert_string_to_int(string: String) -> usize{
@@ -22,7 +22,7 @@ fn convert_string_to_int(string: String) -> usize{
 //     *old_buckets = buckets;
 // }
 
-pub fn process(mut stream: TcpStream, thread_locked_table: Arc<StripedHashTable>) {
+pub fn process(mut stream: TcpStream, thread_locked_table: Arc<StripedHashMap>) {
     let mut command_str = tcp_helper::read_command(&mut stream);
     while !command_str.eq("CLOSE") {
         let command_units = command_str.split_whitespace().collect::<Vec<_>>();
