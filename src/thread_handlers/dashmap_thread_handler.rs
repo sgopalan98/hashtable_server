@@ -17,7 +17,6 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<DashMap<u128, u12
         if command_str.len() == 0 {
             continue;
         }
-        println!("Input is {}\n", command_str);
 
         let operation: &str = command_units[0];
         let key: usize = convert_string_to_int(command_units[1].to_owned());
