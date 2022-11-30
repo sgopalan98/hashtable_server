@@ -1,0 +1,30 @@
+syntax = "proto3";
+package hashmap;
+
+
+
+service HashMap {
+    // Our Get rpc accepts GetRequests and returns GetReplies
+    rpc get (HashMapRequest) returns (HashMapReply);
+
+    // Our Insert rpc accepts InsertRequests and returns InsertReplies
+    rpc insert (HashMapRequest) returns (HashMapReply);
+
+    // Our Remove rpc accepts RemoveRequests and returns RemoveReplies
+    rpc remove (HashMapRequest) returns (HashMapReply);
+
+    // Our Update rpc accepts UpdateRequests and returns UpdateReplies
+    rpc update (HashMapRequest) returns (HashMapReply);
+
+    rpc reset (HashMapRequest) returns (HashMapReply);
+}
+
+
+
+message HashMapRequest {
+    int64 key = 1;
+}
+
+message HashMapReply {
+    bool error_code = 1;
+}
