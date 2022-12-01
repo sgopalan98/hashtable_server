@@ -21,15 +21,16 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<DashMap<u128, u12
         let operation: &str = command_units[0];
         let key: usize = convert_string_to_int(command_units[1].to_owned());
         
-        // RESET 
-        if operation.eq("RESET") {
+        // CLEAR 
+        if operation.eq("CLEAR") {
             println!("{}\n", command_str);
             thread_locked_table.clear();
             tcp_helper::write_string(&mut stream, "0\n".to_owned());
             return;
         }
 
-        if operation.eq("FINISH") {
+        // CLOSE
+        if operation.eq("CLOSE") {
             println!("{}\n", command_str);
             return;
         }

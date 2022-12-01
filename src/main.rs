@@ -29,6 +29,7 @@ fn main() {
         let stream = stream.unwrap();
         thread::spawn(move|| {
             dashmap_thread_handler::process(stream, thread_specific_hashtable);
+            println!("FINISHED EXECUTING THE PROCESS");
         });
     }
 }
