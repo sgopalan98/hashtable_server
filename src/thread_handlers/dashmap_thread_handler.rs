@@ -15,6 +15,7 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<DashMap<u128, u12
         let command_str = tcp_helper::read_command(&mut stream);
         let command_units = command_str.split_whitespace().collect::<Vec<_>>();
         if command_str.len() == 0 {
+            println!("NOTHING {}\n", command_str);
             continue;
         }
 
@@ -26,13 +27,13 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<DashMap<u128, u12
             println!("{}\n", command_str);
             thread_locked_table.clear();
             tcp_helper::write_string(&mut stream, "0\n".to_owned());
-            return;
+            break;
         }
 
         // CLOSE
         if operation.eq("CLOSE") {
             println!("{}\n", command_str);
-            return;
+            break;
         }
 
         // GET
