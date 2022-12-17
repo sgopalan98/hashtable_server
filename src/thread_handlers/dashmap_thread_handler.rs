@@ -1,4 +1,3 @@
-use std::io::Write;
 use std::sync::Arc;
 use std::net::TcpStream;
 
@@ -15,7 +14,6 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<DashMap<u128, u12
         let command_str = tcp_helper::read_command(&mut stream);
         let command_units = command_str.split_whitespace().collect::<Vec<_>>();
         if command_str.len() == 0 {
-            println!("NOTHING {}\n", command_str);
             continue;
         }
 
@@ -24,7 +22,6 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<DashMap<u128, u12
         
         // CLEAR 
         if operation.eq("CLEAR") {
-            println!("{}\n", command_str);
             thread_locked_table.clear();
             tcp_helper::write_string(&mut stream, "0\n".to_owned());
             break;
@@ -32,7 +29,6 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<DashMap<u128, u12
 
         // CLOSE
         if operation.eq("CLOSE") {
-            println!("{}\n", command_str);
             break;
         }
 
@@ -40,7 +36,7 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<DashMap<u128, u12
         else if operation.eq("GET") {
             let result = thread_locked_table.get(&(key as u128));
             let error_code = match result {
-                Some(value) => "0\n".to_owned(),
+                Some(_value) => "0\n".to_owned(),
                 None => "1\n".to_owned(),
             };
             tcp_helper::write_string(&mut stream, error_code);
@@ -50,7 +46,7 @@ pub fn process(mut stream: TcpStream, thread_locked_table: Arc<DashMap<u128, u12
         else if operation.eq("INSERT"){
             let value = convert_string_to_int(command_units[2].to_owned());
             let error_code = match thread_locked_table.insert(key as u128, value as u128){
-                Some(value) => "1\n".to_owned(),
+                Some(_value) => "1\n".to_owned(),
                 None => "0\n".to_owned(),
             };
             tcp_helper::write_string(&mut stream, error_code);
