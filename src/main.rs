@@ -1,20 +1,63 @@
-mod thread_handlers;
+
+mod adapters;
 mod tcp_helper;
-use std::sync::Arc;
+use std::{sync::Arc, any::Any};
 use std::thread;
 use std::net::TcpListener;
+use adapters::{DashMapAdapter, LeapMapAdapter};
 use dashmap::DashMap;
-use thread_handlers::dashmap_thread_handler;
+use leapfrog::LeapMap;
+mod thread_map_handler;
+use structopt::StructOpt;
+
+pub trait Adapter {
+    type Key: From<u64>;
+    type Value: From<u64>;
+
+    fn create_with_capacity(capacity: usize) -> Self;
+
+    fn clone(&self) -> Self;
+
+    /// Perform a lookup for `key`.
+    ///
+    /// Should return `true` if the key is found.
+    fn get(&mut self, key: &Self::Key) -> bool;
+
+    /// Insert `key` into the collection.
+    ///
+    /// Should return `true` if no value previously existed for the key.
+    fn insert(&mut self, key: &Self::Key, value: Self::Value) -> bool;
+
+    /// Remove `key` from the collection.
+    ///
+    /// Should return `true` if the key existed and was removed.
+    fn remove(&mut self, key: &Self::Key) -> bool;
+
+    /// Update the value for `key` in the collection, if it exists.
+    ///
+    /// Should return `true` if the key existed and was updated.
+    ///
+    /// Should **not** insert the key if it did not exist.
+    fn update(&mut self, key: &Self::Key) -> bool;
+}
 
 fn convert_string_to_int(string: String) -> usize{
     let string = string.trim();
     return string.parse::<usize>().unwrap();
 }
 
-fn main() {
+
+#[derive(Debug, StructOpt)]
+pub struct Options {
+    #[structopt(short, long, default_value = "dashmap")]
+    pub map: String,
+}
+
+fn main() -> ! {
     // Start server 
     let address = "0.0.0.0:7879";
     let listener : TcpListener = TcpListener::bind(address).unwrap();
+    let options = Options::from_args();
 
     // First connection should get capacity and no of threads
     loop {
@@ -31,17 +74,17 @@ fn main() {
             capacity = convert_string_to_int(capacity_command);
             no_of_threads = convert_string_to_int(no_of_threads_command);
         }
-        // Create a hashtable with that capacity
-        let dashmap = DashMap::with_capacity(capacity);
-        let locked_dashmap: Arc<DashMap<u128, u128>> = Arc::new(dashmap);
+
+        // Create a Map
+        let map = LeapMapAdapter::create_with_capacity(capacity);
 
         // Create worker threads - #said no of threads
         let mut threads = vec![];
         for stream in listener.incoming().take(no_of_threads) {
-            let thread_specific_hashtable = Arc::clone(&locked_dashmap);
+            let thread_specific_hashtable = map.clone();
             let stream = stream.unwrap();
             threads.push(thread::spawn(move|| {
-                dashmap_thread_handler::process(stream, thread_specific_hashtable);
+                thread_map_handler::process(stream, thread_specific_hashtable);
             }));
         }
 

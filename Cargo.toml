@@ -1,11 +1,22 @@
 [package]
-name = "concurrent_hash_table"
+name = "hashtable_server"
 version = "0.1.0"
+authors = ["Santhanagopalan <santhanagopalank1998@gmail.com>"]
 edition = "2021"
+publish = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 dashmap = "5.0.0"
+leapfrog = "0.2.2"
 striped_hashmap = { git = "https://github.com/sgopalan98/StripedHashTable" }
 serde_json = "1.0"
+structopt = "0.3.25"
+
+
+[profile.release]
+debug = true
+lto = true
+codegen-units = 1
+panic = "abort"
