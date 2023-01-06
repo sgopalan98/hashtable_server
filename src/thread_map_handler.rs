@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, io::BufReader};
 use std::net::TcpStream;
 
 use dashmap::DashMap;
@@ -9,11 +9,12 @@ fn convert_string_to_int(string: String) -> usize{
 }
 
 pub fn process<T>(mut stream: TcpStream, mut thread_locked_table: T) where T: Adapter<Key = u64, Value = u64> {
-    
+    let mut reader = BufReader::new(stream.try_clone().unwrap());
     loop {
-        let command_str = tcp_helper::read_command(&mut stream);
+        let command_str = tcp_helper::read_command(&mut stream, &mut reader);
         let command_units = command_str.split_whitespace().collect::<Vec<_>>();
         if command_str.len() == 0 {
+            println!("Not receiving anything");
             continue;
         }
 

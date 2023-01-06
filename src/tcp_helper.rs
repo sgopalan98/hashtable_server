@@ -1,9 +1,8 @@
 use std::{net::TcpStream, io::{BufReader, BufRead, Write}};
 
 
-pub fn read_command(stream: &mut TcpStream) -> String{
+pub fn read_command(stream: &mut TcpStream, reader: &mut BufReader<TcpStream>) -> String{
     let mut input = String::new();
-    let mut reader = BufReader::new(stream);
     reader.read_line(&mut input).unwrap();
     let input: String = input.trim().to_owned();
     return input;
