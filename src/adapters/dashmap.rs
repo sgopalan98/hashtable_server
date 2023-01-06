@@ -3,11 +3,11 @@ use std::{sync::Arc, error};
 use dashmap::DashMap;
 use crate::Adapter;
 
-pub struct DashMapAdapter(Arc<DashMap<u128, u128>>);
+pub struct DashMapAdapter(Arc<DashMap<u64, u64>>);
 
 impl Adapter for DashMapAdapter {
-    type Key = u128;
-    type Value = u128;
+    type Key = u64;
+    type Value = u64;
 
     fn create_with_capacity(capacity: usize) -> Self {
         Self(Arc::new(DashMap::with_capacity(capacity)))

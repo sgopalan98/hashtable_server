@@ -78,7 +78,7 @@ fn main() -> ! {
         }
 
         // Create a Map
-        let map = LeapMapAdapter::create_with_capacity(capacity);
+        let map = DashMapAdapter::create_with_capacity(capacity);
 
         // Create worker threads - #said no of threads
         let mut threads = vec![];
