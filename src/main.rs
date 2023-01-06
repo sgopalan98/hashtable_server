@@ -82,7 +82,7 @@ fn main() -> ! {
 
         // Create worker threads - #said no of threads
         let mut threads = vec![];
-        for stream in listener.incoming().take(no_of_threads) {
+        for stream in listener.incoming().take(no_of_threads * 2) {
             let thread_specific_hashtable = map.clone();
             let stream = stream.unwrap();
             threads.push(thread::spawn(move|| {
