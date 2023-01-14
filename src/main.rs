@@ -68,7 +68,7 @@ fn main() -> ! {
         for stream in listener.incoming().take(1) {
             let mut stream = stream.unwrap();
             let mut reader = BufReader::new(stream.try_clone().unwrap());
-            let command = tcp_helper::read_command(&mut stream, &mut reader);
+            let command = tcp_helper::read_setup(&mut stream, &mut reader);
             let command_units = command.split_whitespace().collect::<Vec<_>>();
             let capacity_command = command_units[0].to_owned();
             let no_of_threads_command = command_units[1].to_owned();
