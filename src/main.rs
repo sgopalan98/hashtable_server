@@ -1,6 +1,6 @@
 mod adapters;
 mod tcp_helper;
-use adapters::{DashMapAdapter, LeapMapAdapter};
+use adapters::{DashMapAdapter, LeapMapAdapter, SingleLockMapAdapter};
 use dashmap::DashMap;
 use leapfrog::LeapMap;
 use std::io::BufReader;
@@ -76,7 +76,7 @@ fn main() -> ! {
         }
 
         // Create a Map
-        let map = DashMapAdapter::create_with_capacity(capacity);
+        let map = SingleLockMapAdapter::create_with_capacity(capacity);
 
         // Create worker threads - #said no of threads
         let mut threads = vec![];
