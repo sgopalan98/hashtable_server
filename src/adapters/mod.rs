@@ -1,6 +1,4 @@
-pub use self::{
-    dashmap::DashMapAdapter, leapfrog::LeapMapAdapter
-};
+pub use self::{dashmap::DashMapAdapter, leapfrog::LeapMapAdapter};
 
 mod dashmap;
 mod leapfrog;

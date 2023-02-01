@@ -1,13 +1,12 @@
-
 mod adapters;
 mod tcp_helper;
-use std::io::BufReader;
-use std::{sync::Arc, any::Any};
-use std::thread;
-use std::net::TcpListener;
 use adapters::{DashMapAdapter, LeapMapAdapter};
 use dashmap::DashMap;
 use leapfrog::LeapMap;
+use std::io::BufReader;
+use std::net::TcpListener;
+use std::thread;
+use std::{any::Any, sync::Arc};
 mod thread_map_handler;
 use structopt::StructOpt;
 
@@ -42,11 +41,10 @@ pub trait Adapter {
     fn update(&mut self, key: &Self::Key) -> bool;
 }
 
-fn convert_string_to_int(string: String) -> usize{
+fn convert_string_to_int(string: String) -> usize {
     let string = string.trim();
     return string.parse::<usize>().unwrap();
 }
-
 
 #[derive(Debug, StructOpt)]
 pub struct Options {
@@ -55,9 +53,9 @@ pub struct Options {
 }
 
 fn main() -> ! {
-    // Start server 
+    // Start server
     let address = "0.0.0.0:7879";
-    let listener : TcpListener = TcpListener::bind(address).unwrap();
+    let listener: TcpListener = TcpListener::bind(address).unwrap();
     let options = Options::from_args();
 
     // First connection should get capacity and no of threads
@@ -85,7 +83,7 @@ fn main() -> ! {
         for stream in listener.incoming().take(no_of_threads * 2) {
             let thread_specific_hashtable = map.clone();
             let stream = stream.unwrap();
-            threads.push(thread::spawn(move|| {
+            threads.push(thread::spawn(move || {
                 thread_map_handler::process(stream, thread_specific_hashtable);
             }));
         }
@@ -96,5 +94,3 @@ fn main() -> ! {
         }
     }
 }
-
-

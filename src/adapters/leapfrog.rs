@@ -1,7 +1,7 @@
-use std::{sync::Arc, error};
+use std::{error, sync::Arc};
 
-use leapfrog::LeapMap;
 use crate::Adapter;
+use leapfrog::LeapMap;
 
 pub struct LeapMapAdapter(Arc<LeapMap<u64, u64>>);
 
@@ -32,7 +32,9 @@ impl Adapter for LeapMapAdapter {
 
     fn update(&mut self, key: &Self::Key) -> bool {
         match self.0.get_mut(key) {
-            Some(mut val_ref) => return val_ref.update(|val: &mut Self::Value| *val += 1).is_some(),
+            Some(mut val_ref) => {
+                return val_ref.update(|val: &mut Self::Value| *val += 1).is_some()
+            }
             None => {
                 return false;
             }

@@ -1,7 +1,7 @@
-use std::{sync::Arc, error};
+use std::{error, sync::Arc};
 
-use dashmap::DashMap;
 use crate::Adapter;
+use dashmap::DashMap;
 
 pub struct DashMapAdapter(Arc<DashMap<u64, u64>>);
 
