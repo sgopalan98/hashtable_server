@@ -1,5 +1,7 @@
+use std::collections::HashMap;
 use std::io::Write;
 use std::net::TcpStream;
+use std::sync::Mutex;
 use std::{io::BufReader, sync::Arc};
 
 use crate::{tcp_helper, Adapter};
@@ -9,9 +11,7 @@ fn convert_string_to_int(string: String) -> usize {
     return string.parse::<usize>().unwrap();
 }
 
-pub fn process<T>(mut stream: TcpStream, mut thread_locked_table: T)
-where
-    T: Adapter<Key = u64, Value = u64>,
+pub fn process(mut stream: TcpStream, mut thread_locked_table: Arc<Mutex<HashMap<u64, u64>>>)
 {
     let mut reader = BufReader::new(stream.try_clone().unwrap());
     loop {
@@ -21,6 +21,8 @@ where
             println!("Not receiving anything");
             continue;
         }
+        let mut hashtable = thread_locked_table.lock().unwrap();
+
         let mut error_codes = vec![0u8; 100];
         let mut done = 0;
         for index in 0..100 {
@@ -40,7 +42,7 @@ where
             }
             // GET
             else if operation == 1 {
-                error_code = match thread_locked_table.get(&(key as u64)) {
+                error_code = match hashtable.get(&(key as u64)).is_some() {
                     true => 0,
                     false => 1,
                 };
@@ -48,7 +50,7 @@ where
             }
             // INSERT
             else if operation == 2 {
-                error_code = match thread_locked_table.insert(&(key as u64), 0 as u64) {
+                error_code = match hashtable.insert(key as u64, 0 as u64).is_none() {
                     true => 0,
                     false => 1,
                 };
@@ -56,7 +58,7 @@ where
             }
             // REMOVE
             else if operation == 3 {
-                error_code = match thread_locked_table.remove(&(key as u64)) {
+                error_code = match hashtable.remove(&(key as u64)).is_some() {
                     true => 0,
                     false => 1,
                 };
@@ -64,7 +66,7 @@ where
             }
             // UPDATE
             else if operation == 4 {
-                error_code = match thread_locked_table.update(&(key as u64)) {
+                error_code = match hashtable.get_mut(&key).map(|mut v| *v += 1).is_some() {
                     true => 0,
                     false => 1,
                 };
@@ -72,6 +74,7 @@ where
             } else {
             }
         }
+        drop(hashtable);
         stream.write(&error_codes);
         if done == 1 {
             return;

@@ -1,13 +1,19 @@
 mod adapters;
 mod tcp_helper;
+mod sharded_map_handler;
+mod whole_map_handler;
+
+
+
 use adapters::{DashMapAdapter, LeapMapAdapter, SingleLockMapAdapter};
 use dashmap::DashMap;
 use leapfrog::LeapMap;
+use std::collections::HashMap;
 use std::io::BufReader;
 use std::net::TcpListener;
-use std::thread;
+use std::sync::Mutex;
+use std::{thread, hash};
 use std::{any::Any, sync::Arc};
-mod thread_map_handler;
 use structopt::StructOpt;
 
 pub trait Adapter {
@@ -62,6 +68,7 @@ fn main() -> ! {
     loop {
         let mut capacity = 0;
         let mut no_of_threads = 0;
+        let mut hash_map_type = "SingleLock";
 
         for stream in listener.incoming().take(1) {
             let mut stream = stream.unwrap();
@@ -70,27 +77,70 @@ fn main() -> ! {
             let command_units = command.split_whitespace().collect::<Vec<_>>();
             let capacity_command = command_units[0].to_owned();
             let no_of_threads_command = command_units[1].to_owned();
-            println!("{} {}\n", capacity_command, no_of_threads_command);
+            println!("{} {} {}\n", capacity_command, no_of_threads_command, hash_map_type);
             capacity = convert_string_to_int(capacity_command);
             no_of_threads = convert_string_to_int(no_of_threads_command);
         }
 
-        // Create a Map
-        let map = SingleLockMapAdapter::create_with_capacity(capacity);
+        if hash_map_type.eq("SingleLock") {
+            // Create a Map
+            let map = Arc::new(Mutex::new(HashMap::with_capacity(capacity)));
 
-        // Create worker threads - #said no of threads
-        let mut threads = vec![];
-        for stream in listener.incoming().take(no_of_threads * 2) {
-            let thread_specific_hashtable = map.clone();
-            let stream = stream.unwrap();
-            threads.push(thread::spawn(move || {
-                thread_map_handler::process(stream, thread_specific_hashtable);
-            }));
+            // Create worker threads - #said no of threads
+            let mut threads = vec![];
+            for stream in listener.incoming().take(no_of_threads * 2) {
+                let thread_specific_hashtable = map.clone();
+                let stream = stream.unwrap();
+                threads.push(thread::spawn(move || {
+                    whole_map_handler::process(stream, thread_specific_hashtable);
+                }));
+            }
+
+            // Wait for the threads to finish
+            for thread in threads {
+                thread.join().unwrap();
+            }
         }
 
-        // Wait for the threads to finish
-        for thread in threads {
-            thread.join().unwrap();
+        else if hash_map_type.eq("Sharded") {
+            // Create a Map
+            let map = DashMapAdapter::create_with_capacity(capacity);
+
+            // Create worker threads - #said no of threads
+            let mut threads = vec![];
+            for stream in listener.incoming().take(no_of_threads * 2) {
+                let thread_specific_hashtable = map.clone();
+                let stream = stream.unwrap();
+                threads.push(thread::spawn(move || {
+                    sharded_map_handler::process(stream, thread_specific_hashtable);
+                }));
+            }
+
+            // Wait for the threads to finish
+            for thread in threads {
+                thread.join().unwrap();
+            }
         }
+
+        else if hash_map_type.eq("DashMap") {
+            // Create a Map
+            let map = DashMapAdapter::create_with_capacity(capacity);
+
+            // Create worker threads - #said no of threads
+            let mut threads = vec![];
+            for stream in listener.incoming().take(no_of_threads * 2) {
+                let thread_specific_hashtable = map.clone();
+                let stream = stream.unwrap();
+                threads.push(thread::spawn(move || {
+                    sharded_map_handler::process(stream, thread_specific_hashtable);
+                }));
+            }
+
+            // Wait for the threads to finish
+            for thread in threads {
+                thread.join().unwrap();
+            }
+        }
+
     }
 }
