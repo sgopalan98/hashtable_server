@@ -104,7 +104,7 @@ fn main() -> ! {
 
         else if hash_map_type.eq("Striped") {
             // Create a Map
-            let map = StripedHashMapAdapter::create_with_capacity(no_of_threads);
+            let map = StripedHashMapAdapter::create_with_capacity(capacity);
 
             // Create worker threads - #said no of threads
             let mut threads = vec![];
