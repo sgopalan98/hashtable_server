@@ -5,7 +5,7 @@ mod whole_map_handler;
 
 
 
-use adapters::{DashMapAdapter, LeapMapAdapter, SingleLockMapAdapter};
+use adapters::{DashMapAdapter, LeapMapAdapter, SingleLockMapAdapter, StripedHashMapAdapter};
 use dashmap::DashMap;
 use leapfrog::LeapMap;
 use std::collections::HashMap;
@@ -68,7 +68,7 @@ fn main() -> ! {
     loop {
         let mut capacity = 0;
         let mut no_of_threads = 0;
-        let mut hash_map_type = "SingleLock";
+        let mut hash_map_type = "Striped";
 
         for stream in listener.incoming().take(1) {
             let mut stream = stream.unwrap();
@@ -102,9 +102,9 @@ fn main() -> ! {
             }
         }
 
-        else if hash_map_type.eq("Sharded") {
+        else if hash_map_type.eq("Striped") {
             // Create a Map
-            let map = DashMapAdapter::create_with_capacity(capacity);
+            let map = StripedHashMapAdapter::create_with_capacity(no_of_threads);
 
             // Create worker threads - #said no of threads
             let mut threads = vec![];
