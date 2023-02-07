@@ -1,9 +1,9 @@
-use std::{error, sync::{Arc, Mutex}, collections::{HashMap, HashSet}};
+use std::{error, sync::{Arc, Mutex, RwLock}, collections::{HashMap, HashSet}};
 use once_cell::sync::OnceCell;
 
 use crate::Adapter;
 
-pub struct StripedHashMapAdapter(Arc<Vec<Mutex<HashMap<u64, u64>>>>);
+pub struct StripedHashMapAdapter(Arc<Vec<RwLock<HashMap<u64, u64>>>>);
 
 impl Adapter for StripedHashMapAdapter {
     type Key = u64;
@@ -16,7 +16,7 @@ impl Adapter for StripedHashMapAdapter {
         });
         let mut buckets = Vec::new();
         for _i in 0..no_buckets {
-            buckets.push(Mutex::new(HashMap::with_capacity(capacity)));
+            buckets.push(RwLock::new(HashMap::with_capacity(capacity)));
         }
         Self(Arc::new(buckets))
     }
@@ -29,28 +29,28 @@ impl Adapter for StripedHashMapAdapter {
     fn get(&mut self, key: &Self::Key) -> bool {
         let buckets = &self.0;
         let index = *key as usize % buckets.len();
-        let bucket = buckets[index].lock().unwrap();
+        let bucket = buckets[index].read().unwrap();
         bucket.get(key).is_some()
     }
 
     fn insert(&mut self, key: &Self::Key, value: Self::Value) -> bool {
         let buckets = &self.0;
         let index = *key as usize % buckets.len();
-        let mut bucket = buckets[index].lock().unwrap();
+        let mut bucket = buckets[index].write().unwrap();
         bucket.insert(*key, value).is_none()
     }
 
     fn remove(&mut self, key: &Self::Key) -> bool {
         let buckets = &self.0;
         let index = *key as usize % buckets.len();
-        let mut bucket = buckets[index].lock().unwrap();
+        let mut bucket = buckets[index].write().unwrap();
         bucket.remove(key).is_some()
     }
 
     fn update(&mut self, key: &Self::Key) -> bool {
         let buckets = &self.0;
         let index = *key as usize % buckets.len();
-        let mut bucket = buckets[index].lock().unwrap();
+        let mut bucket = buckets[index].write().unwrap();
         bucket.get_mut(key).map(|mut v| *v += 1).is_some()
     }
 }
