@@ -10,13 +10,12 @@ impl Adapter for StripedHashMapAdapter {
     type Value = u64;
 
     fn create_with_capacity(capacity: usize) -> Self {
-        static DEFAULT_SHARD_AMOUNT: OnceCell<usize> = OnceCell::new();
-        let no_buckets = *DEFAULT_SHARD_AMOUNT.get_or_init(|| {
-            (std::thread::available_parallelism().map_or(1, usize::from) * 4).next_power_of_two()
-        });
+        let no_buckets = (num_cpus::get() * 4).next_power_of_two();
+        println!("No of buckets = {}", no_buckets);
+        let capacity_per_bucket = capacity / no_buckets;
         let mut buckets = Vec::new();
         for _i in 0..no_buckets {
-            buckets.push(RwLock::new(HashMap::with_capacity(capacity)));
+            buckets.push(RwLock::new(HashMap::with_capacity(capacity_per_bucket)));
         }
         Self(Arc::new(buckets))
     }
