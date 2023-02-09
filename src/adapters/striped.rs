@@ -28,28 +28,40 @@ impl Adapter for StripedHashMapAdapter {
     fn get(&mut self, key: &Self::Key) -> bool {
         let buckets = &self.0;
         let index = *key as usize % buckets.len();
-        let bucket = buckets[index].read().unwrap();
+        let bucket = match buckets[index].read() {
+            Ok(bucket) => bucket,
+            Err(_) => panic!("BUCKET NOT FOUND"),
+        };
         bucket.get(key).is_some()
     }
 
     fn insert(&mut self, key: &Self::Key, value: Self::Value) -> bool {
         let buckets = &self.0;
         let index = *key as usize % buckets.len();
-        let mut bucket = buckets[index].write().unwrap();
+        let mut bucket = match buckets[index].write() {
+            Ok(bucket) => bucket,
+            Err(_) => panic!("BUCKET NOT FOUND"),
+        };
         bucket.insert(*key, value).is_none()
     }
 
     fn remove(&mut self, key: &Self::Key) -> bool {
         let buckets = &self.0;
         let index = *key as usize % buckets.len();
-        let mut bucket = buckets[index].write().unwrap();
+        let mut bucket = match buckets[index].write() {
+            Ok(bucket) => bucket,
+            Err(_) => panic!("BUCKET NOT FOUND"),
+        };
         bucket.remove(key).is_some()
     }
 
     fn update(&mut self, key: &Self::Key) -> bool {
         let buckets = &self.0;
         let index = *key as usize % buckets.len();
-        let mut bucket = buckets[index].write().unwrap();
+        let mut bucket = match buckets[index].write() {
+            Ok(bucket) => bucket,
+            Err(_) => panic!("BUCKET NOT FOUND"),
+        };
         bucket.get_mut(key).map(|mut v| *v += 1).is_some()
     }
 }

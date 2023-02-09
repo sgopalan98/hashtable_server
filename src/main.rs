@@ -10,7 +10,7 @@ use dashmap::DashMap;
 use leapfrog::LeapMap;
 use std::collections::HashMap;
 use std::io::BufReader;
-use std::net::TcpListener;
+use std::net::{TcpListener, TcpStream};
 use std::sync::Mutex;
 use std::{thread, hash};
 use std::{any::Any, sync::Arc};
@@ -49,7 +49,11 @@ pub trait Adapter {
 
 fn convert_string_to_int(string: String) -> usize {
     let string = string.trim();
-    return string.parse::<usize>().unwrap();
+    let parsed_number = match string.parse::<usize>() {
+        Ok(no) => no,
+        Err(_) => 0,
+    };
+    return parsed_number;
 }
 
 #[derive(Debug, StructOpt)]
@@ -61,7 +65,10 @@ pub struct Options {
 fn main() -> ! {
     // Start server
     let address = "0.0.0.0:7879";
-    let listener: TcpListener = TcpListener::bind(address).unwrap();
+    let listener: TcpListener = match TcpListener::bind(address) {
+        Ok(listener) => listener,
+        Err(_) => panic!("Cannot bind"),
+    };
     let options = Options::from_args();
 
     // First connection should get capacity and no of threads
@@ -71,8 +78,14 @@ fn main() -> ! {
         let mut hash_map_type = "Striped";
 
         for stream in listener.incoming().take(1) {
-            let mut stream = stream.unwrap();
-            let mut reader = BufReader::new(stream.try_clone().unwrap());
+            let mut stream = match stream {
+                Ok(tcp_stream) => tcp_stream,
+                Err(_) => panic!("NO STREAM"),
+            };
+            let mut reader = BufReader::new(match stream.try_clone() {
+                Ok(stream) => stream,
+                Err(_) => panic!("Cannot clone stream"),
+            });
             let command = tcp_helper::read_setup(&mut stream, &mut reader);
             let command_units = command.split_whitespace().collect::<Vec<_>>();
             let capacity_command = command_units[0].to_owned();
@@ -90,7 +103,10 @@ fn main() -> ! {
             let mut threads = vec![];
             for stream in listener.incoming().take(no_of_threads * 2) {
                 let thread_specific_hashtable = map.clone();
-                let stream = stream.unwrap();
+                let stream = match stream {
+                    Ok(stream) => stream,
+                    Err(_) => panic!("Cannot obtain stream"),
+                };
                 threads.push(thread::spawn(move || {
                     whole_map_handler::process(stream, thread_specific_hashtable);
                 }));
@@ -98,7 +114,7 @@ fn main() -> ! {
 
             // Wait for the threads to finish
             for thread in threads {
-                thread.join().unwrap();
+                thread.join();
             }
         }
 
@@ -110,7 +126,10 @@ fn main() -> ! {
             let mut threads = vec![];
             for stream in listener.incoming().take(no_of_threads * 2) {
                 let thread_specific_hashtable = map.clone();
-                let stream = stream.unwrap();
+                let stream = match stream {
+                    Ok(stream) => stream,
+                    Err(_) => panic!("Cannot clone stream"),
+                };
                 threads.push(thread::spawn(move || {
                     sharded_map_handler::process(stream, thread_specific_hashtable);
                 }));
@@ -118,7 +137,7 @@ fn main() -> ! {
 
             // Wait for the threads to finish
             for thread in threads {
-                thread.join().unwrap();
+                thread.join();
             }
         }
 
@@ -130,7 +149,10 @@ fn main() -> ! {
             let mut threads = vec![];
             for stream in listener.incoming().take(no_of_threads * 2) {
                 let thread_specific_hashtable = map.clone();
-                let stream = stream.unwrap();
+                let stream = match stream {
+                    Ok(stream) => stream,
+                    Err(_) => panic!("Cannot clone stream"),
+                };
                 threads.push(thread::spawn(move || {
                     sharded_map_handler::process(stream, thread_specific_hashtable);
                 }));
@@ -138,7 +160,7 @@ fn main() -> ! {
 
             // Wait for the threads to finish
             for thread in threads {
-                thread.join().unwrap();
+                thread.join();
             }
         }
 

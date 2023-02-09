@@ -5,7 +5,10 @@ use std::{
 
 pub fn read_setup(stream: &mut TcpStream, reader: &mut BufReader<TcpStream>) -> String {
     let mut input = String::new();
-    reader.read_line(&mut input).unwrap();
+    match reader.read_line(&mut input) {
+        Ok(_) => 0,
+        Err(_) => 0,
+    };
     let input: String = input.trim().to_owned();
     return input;
 }
@@ -17,5 +20,8 @@ pub fn read_command(stream: &mut TcpStream, reader: &mut BufReader<TcpStream>) -
 }
 
 pub fn write_string(stream: &mut TcpStream, output: String) {
-    stream.write(output.as_bytes()).unwrap();
+    match stream.write(output.as_bytes()) {
+        Ok(_) => 0,
+        Err(_) => 0,
+    };
 }

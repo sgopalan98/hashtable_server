@@ -8,7 +8,10 @@ pub fn process<T>(mut stream: TcpStream, mut thread_locked_table: T)
 where
     T: Adapter<Key = u64, Value = u64>,
 {
-    let mut reader = BufReader::new(stream.try_clone().unwrap());
+    let mut reader = BufReader::new(match stream.try_clone() {
+        Ok(stream) => stream,
+        Err(_) => panic!("Cannot clone stream"),
+    });
     loop {
         let command_u8s = tcp_helper::read_command(&mut stream, &mut reader);
 
@@ -22,10 +25,12 @@ where
             let start_index = 9 * index;
             let end_index = 9 * index + 9;
             let operation = command_u8s[start_index];
+            let key_u8s = &command_u8s[(start_index + 1)..end_index];
             let key = u64::from_be_bytes(
-                command_u8s[(start_index + 1)..end_index]
-                    .try_into()
-                    .unwrap(),
+                match key_u8s.try_into() {
+                    Ok(key) => key,
+                    Err(_) => panic!("Cannot convert slice to array"),
+                },
             );
             let mut error_code: u8 = 0;
             // CLOSE
