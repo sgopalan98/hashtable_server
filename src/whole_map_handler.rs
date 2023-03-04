@@ -11,11 +11,11 @@ fn convert_string_to_int(string: String) -> usize {
     return string.parse::<usize>().unwrap();
 }
 
-pub fn process(mut stream: TcpStream, mut thread_locked_table: Arc<Mutex<HashMap<u64, u64>>>)
+pub fn process(mut stream: TcpStream, mut thread_locked_table: Arc<Mutex<HashMap<u64, u64>>>, ops_st: usize)
 {
     let mut reader = BufReader::new(stream.try_clone().unwrap());
     loop {
-        let command_u8s = tcp_helper::read_command(&mut stream, &mut reader);
+        let command_u8s = tcp_helper::read_command(&mut stream, &mut reader, ops_st);
 
         if command_u8s.len() == 0 {
             println!("Not receiving anything");
@@ -23,9 +23,9 @@ pub fn process(mut stream: TcpStream, mut thread_locked_table: Arc<Mutex<HashMap
         }
         let mut hashtable = thread_locked_table.lock().unwrap();
 
-        let mut error_codes = vec![0u8; 100];
+        let mut error_codes = vec![0u8; ops_st];
         let mut done = 0;
-        for index in 0..100 {
+        for index in 0..ops_st {
             let start_index = 9 * index;
             let end_index = 9 * index + 9;
             let operation = command_u8s[start_index];

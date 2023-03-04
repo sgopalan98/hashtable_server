@@ -13,8 +13,8 @@ pub fn read_setup(stream: &mut TcpStream, reader: &mut BufReader<TcpStream>) -> 
     return input;
 }
 
-pub fn read_command(stream: &mut TcpStream, reader: &mut BufReader<TcpStream>) -> Vec<u8> {
-    let mut input = vec![0u8; 9 * 100];
+pub fn read_command(stream: &mut TcpStream, reader: &mut BufReader<TcpStream>, ops_st: usize) -> Vec<u8> {
+    let mut input = vec![0u8; 9 * ops_st];
     reader.read_exact(&mut input);
     return input;
 }

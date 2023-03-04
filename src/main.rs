@@ -75,6 +75,7 @@ fn main() -> ! {
     loop {
         let mut capacity = 0;
         let mut no_of_threads = 0;
+        let mut ops_st = 0;
         let mut hash_map_type = "Striped";
 
         for stream in listener.incoming().take(1) {
@@ -90,9 +91,11 @@ fn main() -> ! {
             let command_units = command.split_whitespace().collect::<Vec<_>>();
             let capacity_command = command_units[0].to_owned();
             let no_of_threads_command = command_units[1].to_owned();
-            println!("{} {} {}\n", capacity_command, no_of_threads_command, hash_map_type);
+            let ops_st_command = command_units[2].to_owned();
+            println!("{} {} {} {}\n", capacity_command, no_of_threads_command, ops_st_command, hash_map_type);
             capacity = convert_string_to_int(capacity_command);
             no_of_threads = convert_string_to_int(no_of_threads_command);
+            ops_st = convert_string_to_int(ops_st_command);
         }
 
         if hash_map_type.eq("SingleLock") {
@@ -108,7 +111,7 @@ fn main() -> ! {
                     Err(_) => panic!("Cannot obtain stream"),
                 };
                 threads.push(thread::spawn(move || {
-                    whole_map_handler::process(stream, thread_specific_hashtable);
+                    whole_map_handler::process(stream, thread_specific_hashtable, ops_st);
                 }));
             }
 
@@ -131,7 +134,7 @@ fn main() -> ! {
                     Err(_) => panic!("Cannot clone stream"),
                 };
                 threads.push(thread::spawn(move || {
-                    sharded_map_handler::process(stream, thread_specific_hashtable);
+                    sharded_map_handler::process(stream, thread_specific_hashtable, ops_st);
                 }));
             }
 
@@ -154,7 +157,7 @@ fn main() -> ! {
                     Err(_) => panic!("Cannot clone stream"),
                 };
                 threads.push(thread::spawn(move || {
-                    sharded_map_handler::process(stream, thread_specific_hashtable);
+                    sharded_map_handler::process(stream, thread_specific_hashtable, ops_st);
                 }));
             }
 

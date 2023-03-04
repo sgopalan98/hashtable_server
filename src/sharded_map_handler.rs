@@ -4,7 +4,7 @@ use std::{io::BufReader, sync::Arc};
 
 use crate::{tcp_helper, Adapter};
 
-pub fn process<T>(mut stream: TcpStream, mut thread_locked_table: T)
+pub fn process<T>(mut stream: TcpStream, mut thread_locked_table: T, ops_st: usize)
 where
     T: Adapter<Key = u64, Value = u64>,
 {
@@ -13,15 +13,15 @@ where
         Err(_) => panic!("Cannot clone stream"),
     });
     loop {
-        let command_u8s = tcp_helper::read_command(&mut stream, &mut reader);
+        let command_u8s = tcp_helper::read_command(&mut stream, &mut reader, ops_st);
 
         if command_u8s.len() == 0 {
             println!("Not receiving anything");
             continue;
         }
-        let mut error_codes = vec![0u8; 100];
+        let mut error_codes = vec![0u8; ops_st];
         let mut done = 0;
-        for index in 0..100 {
+        for index in 0..ops_st {
             let start_index = 9 * index;
             let end_index = 9 * index + 9;
             let operation = command_u8s[start_index];
@@ -32,7 +32,7 @@ where
                     Err(_) => panic!("Cannot convert slice to array"),
                 },
             );
-            let mut error_code: u8 = 0;
+            let error_code: u8;
             // CLOSE
             if operation == 0 {
                 done = 1;
