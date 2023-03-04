@@ -9,6 +9,7 @@ impl Adapter for StripedHashMapAdapter {
     type Key = u64;
     type Value = u64;
 
+    #[inline(never)]
     fn create_with_capacity(capacity: usize) -> Self {
         let no_buckets = (num_cpus::get() * 4).next_power_of_two();
         println!("No of buckets = {}", no_buckets);
@@ -20,11 +21,13 @@ impl Adapter for StripedHashMapAdapter {
         Self(Arc::new(buckets))
     }
 
+    #[inline(never)]
     fn clone(&self) -> Self {
         let map = &self.0;
         Self(Arc::clone(&map))
     }
 
+    #[inline(never)]
     fn get(&mut self, key: &Self::Key) -> bool {
         let buckets = &self.0;
         let index = *key as usize % buckets.len();
@@ -35,6 +38,7 @@ impl Adapter for StripedHashMapAdapter {
         bucket.get(key).is_some()
     }
 
+    #[inline(never)]
     fn insert(&mut self, key: &Self::Key, value: Self::Value) -> bool {
         let buckets = &self.0;
         let index = *key as usize % buckets.len();
@@ -45,6 +49,7 @@ impl Adapter for StripedHashMapAdapter {
         bucket.insert(*key, value).is_none()
     }
 
+    #[inline(never)]
     fn remove(&mut self, key: &Self::Key) -> bool {
         let buckets = &self.0;
         let index = *key as usize % buckets.len();
@@ -55,6 +60,7 @@ impl Adapter for StripedHashMapAdapter {
         bucket.remove(key).is_some()
     }
 
+    #[inline(never)]
     fn update(&mut self, key: &Self::Key) -> bool {
         let buckets = &self.0;
         let index = *key as usize % buckets.len();

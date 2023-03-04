@@ -4,6 +4,7 @@ use std::{io::BufReader, sync::Arc};
 
 use crate::{tcp_helper, Adapter};
 
+#[inline(never)]
 pub fn process<T>(mut stream: TcpStream, mut thread_locked_table: T, ops_st: usize)
 where
     T: Adapter<Key = u64, Value = u64>,
