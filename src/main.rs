@@ -62,8 +62,9 @@ pub struct Options {
     pub map: String,
 }
 
-fn main() -> ! {
+fn main() {
     // Start server
+    println!("starting server");
     let address = "0.0.0.0:7879";
     let listener: TcpListener = match TcpListener::bind(address) {
         Ok(listener) => listener,
@@ -71,101 +72,159 @@ fn main() -> ! {
     };
     let options = Options::from_args();
 
-    // First connection should get capacity and no of threads
-    loop {
-        let mut capacity = 0;
-        let mut no_of_threads = 0;
-        let mut ops_st = 0;
-        let mut hash_map_type = "Striped";
+    
+    let mut capacity = 0;
+    let mut no_of_threads = 0;
+    let mut ops_st = 0;
+    let mut hash_map_type = "DashMap";
 
-        for stream in listener.incoming().take(1) {
-            let mut stream = match stream {
-                Ok(tcp_stream) => tcp_stream,
-                Err(_) => panic!("NO STREAM"),
+    for stream in listener.incoming().take(1) {
+        let mut stream = match stream {
+            Ok(tcp_stream) => tcp_stream,
+            Err(_) => panic!("NO STREAM"),
+        };
+        let mut reader = BufReader::new(match stream.try_clone() {
+            Ok(stream) => stream,
+            Err(_) => panic!("Cannot clone stream"),
+        });
+        let command = tcp_helper::read_setup(&mut stream, &mut reader);
+        let command_units = command.split_whitespace().collect::<Vec<_>>();
+        let capacity_command = command_units[0].to_owned();
+        let no_of_threads_command = command_units[1].to_owned();
+        let ops_st_command = command_units[2].to_owned();
+        println!("{} {} {} {}\n", capacity_command, no_of_threads_command, ops_st_command, hash_map_type);
+        capacity = convert_string_to_int(capacity_command);
+        no_of_threads = convert_string_to_int(no_of_threads_command);
+        ops_st = convert_string_to_int(ops_st_command);
+    }
+
+    if hash_map_type.eq("SingleLock") {
+        // Create a Map
+        let map = Arc::new(Mutex::new(HashMap::with_capacity(capacity)));
+
+        // Create worker threads - #said no of threads
+        let mut threads = vec![];
+        for stream in listener.incoming().take(no_of_threads * 2) {
+            let thread_specific_hashtable = map.clone();
+            let stream = match stream {
+                Ok(stream) => stream,
+                Err(_) => panic!("Cannot obtain stream"),
             };
-            let mut reader = BufReader::new(match stream.try_clone() {
+            threads.push(thread::spawn(move || {
+                whole_map_handler::process(stream, thread_specific_hashtable, ops_st);
+            }));
+        }
+
+        // Wait for the threads to finish
+        for thread in threads {
+            thread.join();
+        }
+    }
+
+    else if hash_map_type.eq("Striped") {
+        // Create a Map
+        let map = StripedHashMapAdapter::create_with_capacity(capacity);
+
+                
+        let mut prefiller_streams = vec![];
+        for stream in listener.incoming().take(no_of_threads) {
+            let stream = match stream {
                 Ok(stream) => stream,
                 Err(_) => panic!("Cannot clone stream"),
-            });
-            let command = tcp_helper::read_setup(&mut stream, &mut reader);
-            let command_units = command.split_whitespace().collect::<Vec<_>>();
-            let capacity_command = command_units[0].to_owned();
-            let no_of_threads_command = command_units[1].to_owned();
-            let ops_st_command = command_units[2].to_owned();
-            println!("{} {} {} {}\n", capacity_command, no_of_threads_command, ops_st_command, hash_map_type);
-            capacity = convert_string_to_int(capacity_command);
-            no_of_threads = convert_string_to_int(no_of_threads_command);
-            ops_st = convert_string_to_int(ops_st_command);
+            };
+            prefiller_streams.push(stream);
         }
 
-        if hash_map_type.eq("SingleLock") {
-            // Create a Map
-            let map = Arc::new(Mutex::new(HashMap::with_capacity(capacity)));
-
-            // Create worker threads - #said no of threads
-            let mut threads = vec![];
-            for stream in listener.incoming().take(no_of_threads * 2) {
-                let thread_specific_hashtable = map.clone();
-                let stream = match stream {
-                    Ok(stream) => stream,
-                    Err(_) => panic!("Cannot obtain stream"),
-                };
-                threads.push(thread::spawn(move || {
-                    whole_map_handler::process(stream, thread_specific_hashtable, ops_st);
-                }));
-            }
-
-            // Wait for the threads to finish
-            for thread in threads {
-                thread.join();
-            }
+        // Create worker threads - #said no of threads
+        let mut prefiller_threads = vec![];
+        for stream in prefiller_streams {
+            let thread_specific_hashtable = map.clone();
+            prefiller_threads.push(thread::spawn(move || {
+                sharded_map_handler::process(stream, thread_specific_hashtable, ops_st);
+            }));
         }
 
-        else if hash_map_type.eq("Striped") {
-            // Create a Map
-            let map = StripedHashMapAdapter::create_with_capacity(capacity);
-
-            // Create worker threads - #said no of threads
-            let mut threads = vec![];
-            for stream in listener.incoming().take(no_of_threads * 2) {
-                let thread_specific_hashtable = map.clone();
-                let stream = match stream {
-                    Ok(stream) => stream,
-                    Err(_) => panic!("Cannot clone stream"),
-                };
-                threads.push(thread::spawn(move || {
-                    sharded_map_handler::process(stream, thread_specific_hashtable, ops_st);
-                }));
-            }
-
-            // Wait for the threads to finish
-            for thread in threads {
-                thread.join();
-            }
+        // Wait for the threads to finish
+        for thread in prefiller_threads {
+            thread.join();
         }
 
-        else if hash_map_type.eq("DashMap") {
-            // Create a Map
-            let map = DashMapAdapter::create_with_capacity(capacity);
 
-            // Create worker threads - #said no of threads
-            let mut threads = vec![];
-            for stream in listener.incoming().take(no_of_threads * 2) {
-                let thread_specific_hashtable = map.clone();
-                let stream = match stream {
-                    Ok(stream) => stream,
-                    Err(_) => panic!("Cannot clone stream"),
-                };
-                threads.push(thread::spawn(move || {
-                    sharded_map_handler::process(stream, thread_specific_hashtable, ops_st);
-                }));
-            }
-
-            // Wait for the threads to finish
-            for thread in threads {
-                thread.join();
-            }
+        let mut work_streams = vec![];
+        for stream in listener.incoming().take(no_of_threads) {
+            let stream = match stream {
+                Ok(stream) => stream,
+                Err(_) => panic!("Cannot clone stream"),
+            };
+            work_streams.push(stream);
         }
 
+        // Create worker threads - #said no of threads
+        let mut work_threads = vec![];
+        for stream in work_streams {
+            let thread_specific_hashtable = map.clone();
+            work_threads.push(thread::spawn(move || {
+                sharded_map_handler::process(stream, thread_specific_hashtable, ops_st);
+            }));
+        }
+
+        // Wait for the threads to finish
+        for thread in work_threads {
+            thread.join();
+        }
     }
+
+    else if hash_map_type.eq("DashMap") {
+        // Create a Map
+        let map = DashMapAdapter::create_with_capacity(1 << capacity);
+
+        
+        let mut prefiller_streams = vec![];
+        for stream in listener.incoming().take(no_of_threads) {
+            let stream = match stream {
+                Ok(stream) => stream,
+                Err(_) => panic!("Cannot clone stream"),
+            };
+            prefiller_streams.push(stream);
+        }
+
+        // Create worker threads - #said no of threads
+        let mut prefiller_threads = vec![];
+        for stream in prefiller_streams {
+            let thread_specific_hashtable = map.clone();
+            prefiller_threads.push(thread::spawn(move || {
+                sharded_map_handler::process(stream, thread_specific_hashtable, ops_st);
+            }));
+        }
+
+        // Wait for the threads to finish
+        for thread in prefiller_threads {
+            thread.join();
+        }
+
+
+        let mut work_streams = vec![];
+        for stream in listener.incoming().take(no_of_threads) {
+            let stream = match stream {
+                Ok(stream) => stream,
+                Err(_) => panic!("Cannot clone stream"),
+            };
+            work_streams.push(stream);
+        }
+
+        // Create worker threads - #said no of threads
+        let mut work_threads = vec![];
+        for stream in work_streams {
+            let thread_specific_hashtable = map.clone();
+            work_threads.push(thread::spawn(move || {
+                sharded_map_handler::process(stream, thread_specific_hashtable, ops_st);
+            }));
+        }
+
+        // Wait for the threads to finish
+        for thread in work_threads {
+            thread.join();
+        }
+    }
+
 }
