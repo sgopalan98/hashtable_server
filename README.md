@@ -1,3 +1,7 @@
+Build:
+
+cargo build --release
+
 Run: 
 
-cargo run 0.0.0.0:7878
+./target/release/hashtable_server
