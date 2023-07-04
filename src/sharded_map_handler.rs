@@ -1,81 +1,111 @@
-use std::io::Write;
+use std::sync::Arc;
+use std::{io::Write};
 use std::net::TcpStream;
-use std::{io::BufReader, sync::Arc};
+use crate::{receive_request, KeyValueType};
+use dashmap::DashMap;
+use serde::{Deserialize, Serialize};
 
-use crate::{tcp_helper, Adapter};
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Request {
+    operations: Vec<Operation>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OperationResults {
+    results: Vec<OperationResult>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+enum Operation {
+    Read { key: KeyValueType },
+    Insert { key: KeyValueType, value: KeyValueType },
+    Remove { key: KeyValueType },
+    Increment { key: KeyValueType },
+    Close
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+enum OperationResult {
+    ReadSuccess(KeyValueType),
+    ReadFailure(String),
+    InsertNew(KeyValueType),
+    InsertOld(KeyValueType),
+    RemoveSuccess(KeyValueType),
+    RemoveFailure(String),
+    IncrementSuccess(KeyValueType),
+    IncrementFailure(String),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+enum ResultData {
+    String(String),
+    Int(i32),
+    // Add more types as needed
+}
+
+fn send_request<T: Serialize>(stream: &mut TcpStream, request: &T) {
+    let request_json = serde_json::to_string(&request).expect("Failed to serialize request");
+    stream.write_all(request_json.as_bytes()).expect("Failed to send request");
+}
 
 #[inline(never)]
-pub fn process<T>(mut stream: TcpStream, mut thread_locked_table: T, ops_st: usize)
-where
-    T: Adapter<Key = u64, Value = u64>,
+pub fn process(mut stream: TcpStream, mut thread_locked_table: Arc<DashMap<KeyValueType, KeyValueType>>)
 {
-    let mut reader = BufReader::new(match stream.try_clone() {
-        Ok(stream) => stream,
-        Err(_) => panic!("Cannot clone stream"),
-    });
     loop {
-        let command_u8s = tcp_helper::read_command(&mut stream, &mut reader, ops_st);
+        let request: Request = receive_request(&stream);
+        let mut results = Vec::new();
 
-        if command_u8s.len() == 0 {
-            println!("Not receiving anything");
-            continue;
+        for operation in request.operations {
+            let result = match operation {
+                
+
+                Operation::Read { key } => {
+                    match thread_locked_table.get(&key) {
+                        Some(value) => OperationResult::ReadSuccess(value.clone()),
+                        None => OperationResult::ReadFailure(String::from("Key does not exist")),
+                    }
+                }
+
+
+                Operation::Insert { key, value } => {
+                    let old_value = thread_locked_table.insert(key.clone(), value.clone());
+                    match old_value {
+                        Some(old_value) => OperationResult::InsertOld(old_value),
+                        None => OperationResult::InsertNew(value),
+                    }
+                }
+
+
+                Operation::Remove { key } => {
+                    match thread_locked_table.remove(&key) {
+                        Some((key, value)) => OperationResult::RemoveSuccess(value.clone()),
+                        None => OperationResult::RemoveFailure(String::from("Key does not exist")),
+                    }
+                }
+
+                Operation::Increment { key } => {
+                    match thread_locked_table.get_mut(&key) {
+                        Some(entry) => {
+                            match *entry {
+                                KeyValueType::Int(mut value) => {
+                                    value = value + 1;
+                                    OperationResult::IncrementSuccess(KeyValueType::Int(value + 1))
+                                },
+                                KeyValueType::String(_) => OperationResult::IncrementFailure(String::from("Value is not an integer")),
+                            }
+                        }
+                        None => OperationResult::IncrementFailure(String::from("Key does not exist")),
+                    }
+                }
+                Operation::Close => return,
+            };
+            
+            results.push(result);
         }
-        let mut error_codes = vec![0u8; ops_st];
-        let mut done = 0;
-        for index in 0..ops_st {
-            let start_index = 9 * index;
-            let end_index = 9 * index + 9;
-            let operation = command_u8s[start_index];
-            let key_u8s = &command_u8s[(start_index + 1)..end_index];
-            let key = u64::from_be_bytes(
-                match key_u8s.try_into() {
-                    Ok(key) => key,
-                    Err(_) => panic!("Cannot convert slice to array"),
-                },
-            );
-            let error_code: u8;
-            // CLOSE
-            if operation == 0 {
-                done = 1;
-                break;
-            }
-            // GET
-            else if operation == 1 {
-                error_code = match thread_locked_table.get(&(key as u64)) {
-                    true => 0,
-                    false => 1,
-                };
-                error_codes[index] = error_code;
-            }
-            // INSERT
-            else if operation == 2 {
-                error_code = match thread_locked_table.insert(&(key as u64), 0 as u64) {
-                    true => 0,
-                    false => 1,
-                };
-                error_codes[index] = error_code;
-            }
-            // REMOVE
-            else if operation == 3 {
-                error_code = match thread_locked_table.remove(&(key as u64)) {
-                    true => 0,
-                    false => 1,
-                };
-                error_codes[index] = error_code;
-            }
-            // UPDATE
-            else if operation == 4 {
-                error_code = match thread_locked_table.update(&(key as u64)) {
-                    true => 0,
-                    false => 1,
-                };
-                error_codes[index] = error_code;
-            } else {
-            }
-        }
-        stream.write(&error_codes);
-        if done == 1 {
-            return;
-        }
+        let operation_results = OperationResults{
+            results
+        };
+        send_request(&mut stream, &operation_results);
     }
 }
